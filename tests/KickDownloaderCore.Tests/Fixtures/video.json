@@ -1,0 +1,89 @@
+{
+  "id": 133582026,
+  "live_stream_id": 137883983,
+  "slug": null,
+  "thumb": null,
+  "s3": null,
+  "trading_platform_id": null,
+  "created_at": "2026-11-14T22:41:50.000000Z",
+  "updated_at": "2026-11-15T21:37:02.000000Z",
+  "uuid": "371f0495-9aaa-4e7a-b88e-22b50c6194b0",
+  "views": 43408,
+  "deleted_at": null,
+  "is_pruned": false,
+  "is_private": false,
+  "status": "public",
+  "source": "https://stream.kick.com/3c81249a5ce0/ivs/v1/196233775518/DsuAwCgUc9Bh/2026/11/14/22/41/5ED3OHWidY3j/media/hls/master.m3u8",
+  "livestream": {
+    "id": 137883983,
+    "slug": "06e77216-liveclickherelock-indramanewsvideosreactsgamesstuffdont-miss-the-stuffits-really-coolhahatyping-words-xd",
+    "channel_id": 668,
+    "created_at": "2026-11-14 22:41:50",
+    "session_title": "🐖LIVE🐖CLICK🐖HERE🐖LOCK IN🐖DRAMA🐖NEWS🐖VIDEOS🐖REACTS🐖GAMES🐖STUFF🐖DONT MISS THE STUFF🐖ITS REALLY COOL🐖HAHA🐖TYPING WORDS XD🐖",
+    "is_live": false,
+    "risk_level_id": null,
+    "start_time": "2026-11-14T22:41:47+00:00",
+    "source": null,
+    "twitch_channel": null,
+    "duration": 34646000,
+    "language": "English",
+    "is_mature": true,
+    "viewer_count": 1637,
+    "tags": [],
+    "thumbnail": "https://kick-prod-videos-30-day.s3.us-west-2.amazonaws.com/thumbnails/livestream/137883983/thumb0/video_thumbnail/thumb0.jpg?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAS3MDRZGPNNNM6JOI%2F20261115%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20261115T214746Z&X-Amz-SignedHeaders=host&X-Amz-Expires=300&X-Amz-Signature=727c6926f0b63578e06a979cd9f8941c9c06ab2b382eac7b15a68b163401d288",
+    "vod_id": "01a1dc39-53f8-7a6d-9a47-80b450da6c52",
+    "channel": {
+      "id": 668,
+      "user_id": 676,
+      "slug": "xqc",
+      "is_banned": false,
+      "playback_url": "https://fa723fc1b171.us-west-2.playback.live-video.net/api/video/v1/us-west-2.196233775518.channel.DsuAwCgUc9Bh.m3u8",
+      "name_updated_at": null,
+      "vod_enabled": true,
+      "subscription_enabled": true,
+      "is_affiliate": false,
+      "followersCount": 1647501,
+      "user": {
+        "profilepic": "https://files.kick.com/images/user/676/profile_image/conversion/931b4e8f-5445-427c-bd82-b473530390cc-fullsize.webp",
+        "bio": "THE BEST AT ABSOLUTELY EVERYTHING. THE JUICER. LEADER OF THE JUICERS.",
+        "twitter": "xqc",
+        "facebook": "",
+        "instagram": "xqcow1/",
+        "youtube": "channel/UCmDTrq0LNgPodDOFZiSbsww",
+        "discord": "xqcow",
+        "tiktok": "",
+        "username": "xQc"
+      },
+      "can_host": true,
+      "verified": {
+        "id": 3496,
+        "channel_id": 668,
+        "created_at": "2023-06-16T21:07:17.000000Z",
+        "updated_at": "2023-06-16T21:07:17.000000Z"
+      }
+    },
+    "categories": [
+      {
+        "id": 15,
+        "category_id": 2,
+        "name": "Just Chatting",
+        "slug": "just-chatting",
+        "tags": [
+          "IRL",
+          "Casual"
+        ],
+        "description": null,
+        "deleted_at": null,
+        "is_mature": false,
+        "viewers": 324114,
+        "is_fallback": true,
+        "category": {
+          "id": 2,
+          "name": "IRL",
+          "slug": "irl",
+          "icon": "🎙️"
+        }
+      }
+    ]
+  }
+}

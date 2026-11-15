@@ -1,0 +1,61 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+publish/
+dist/
+artifacts/
+
+# Visual Studio / Rider / VS Code
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.DotSettings.user
+launch.json
+
+# Tests and coverage
+TestResults/
+coverage/
+*.trx
+*.coverage
+*.coveragexml
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+
+# Logs and caches
+*.log
+*.tmp
+__pycache__/
+*.pyc
+
+# Local scratch, downloads and render output (never commit)
+out/
+probe_out/
+reference/
+*.mp4
+*.mov
+*.webm
+*.ts
+/chat*.json
+!tests/**/Fixtures/*.json
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Local tool config and secrets
+.claude/
+.env
+.env.*
+settings.json

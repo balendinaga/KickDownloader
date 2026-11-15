@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>KickDownloaderWPF</AssemblyName>
+    <RootNamespace>KickDownloaderWPF</RootNamespace>
+    <!-- ThemeMode (Fluent light/dark theme) is marked experimental in .NET 9/10. -->
+    <NoWarn>$(NoWarn);WPF0001</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The WPF SDK's implicit usings leave out System.IO and System.Net.Http. -->
+    <Using Include="System.IO" />
+    <Using Include="System.Net.Http" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\KickDownloaderCore\KickDownloaderCore.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,73 @@
+{
+  "status": {
+    "error": false,
+    "code": 200,
+    "message": "SUCCESS"
+  },
+  "data": {
+    "messages": [
+      {
+        "id": "94d1205b-f70c-42b3-93e7-dee1ec3c6be2",
+        "chat_id": 668,
+        "user_id": 110224445,
+        "content": "5",
+        "type": "message",
+        "metadata": "{\"message_ref\":\"1794696106535\"}",
+        "created_at": "2026-11-14T22:41:47Z",
+        "sender": {
+          "id": 110224445,
+          "slug": "viewer1",
+          "username": "viewer1",
+          "identity": {
+            "color": "#72ACED",
+            "badges": [],
+            "badges_v2": [
+              {
+                "name": "level",
+                "badge_type": "global",
+                "image_url": "https://ext.cdn.kick.com/chat/badges/30_019f35ce-4729-789b-8883-af0ad1702318.png",
+                "metadata": {
+                  "level": 30
+                },
+                "selected": false,
+                "sort_order": 1
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "cfdb2dcb-0943-4aa1-9e77-ce49455c679a",
+        "chat_id": 668,
+        "user_id": 110224445,
+        "content": "4",
+        "type": "message",
+        "metadata": "{\"message_ref\":\"1794696108913\"}",
+        "created_at": "2026-11-14T22:41:50Z",
+        "sender": {
+          "id": 110224445,
+          "slug": "viewer1",
+          "username": "viewer1",
+          "identity": {
+            "color": "#72ACED",
+            "badges": [],
+            "badges_v2": [
+              {
+                "name": "level",
+                "badge_type": "global",
+                "image_url": "https://ext.cdn.kick.com/chat/badges/30_019f35ce-4729-789b-8883-af0ad1702318.png",
+                "metadata": {
+                  "level": 30
+                },
+                "selected": false,
+                "sort_order": 1
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "cursor": "1794696127265805",
+    "pinned_message": null
+  }
+}

@@ -1,0 +1,204 @@
+#nullable disable
+using SkiaSharp;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+
+namespace TwitchDownloaderCore.TwitchObjects
+{
+    public enum EmoteProvider
+    {
+        FirstParty,
+        ThirdParty
+    }
+
+    [DebuggerDisplay("{Name}")]
+    public sealed class TwitchEmote : IDisposable
+    {
+        public bool Disposed { get; private set; } = false;
+        public SKCodec Codec { get; }
+        public byte[] ImageData { get; set; }
+        public EmoteProvider EmoteProvider { get; set; }
+        private List<SKBitmap> EmoteBitmaps { get; } = [];
+        private SKImage[] _emoteFrames;
+        public SKImage[] EmoteFrames => _emoteFrames ??= EmoteBitmaps.Select(SKImage.FromBitmap).ToArray();
+        public List<int> EmoteFrameDurations { get; private set; } = [];
+        public int TotalDuration { get; set; }
+        public string Name { get; }
+        public string Id { get; }
+        public int ImageScale { get; }
+        public bool IsZeroWidth { get; set; }
+        public int FrameCount { get; }
+        public int Height => Info.Height;
+        public int Width => Info.Width;
+        public SKImageInfo Info => EmoteBitmaps[0].Info;
+
+        public TwitchEmote(byte[] imageData, [AllowNull] SKCodec codec, EmoteProvider emoteProvider, int imageScale, string imageId, string imageName, bool isZeroWidth = false)
+        {
+            if (codec is null)
+            {
+                var ms = new MemoryStream(imageData);
+                Codec = SKCodec.Create(ms, out var result);
+                if (Codec is null)
+                {
+                    throw new Exception($"Skia was unable to decode {imageName} ({imageId}). Returned: {result}");
+                }
+            }
+            else
+            {
+                Codec = codec;
+            }
+
+            EmoteProvider = emoteProvider;
+            Id = imageId;
+            Name = imageName;
+            ImageScale = imageScale;
+            ImageData = imageData;
+            IsZeroWidth = isZeroWidth;
+            FrameCount = Math.Max(1, Codec.FrameCount);
+
+            ExtractFrames();
+            CalculateDurations();
+        }
+
+        private void CalculateDurations()
+        {
+            EmoteFrameDurations = new List<int>(FrameCount);
+
+            if (FrameCount == 1)
+                return;
+
+            var frameInfos = Codec.FrameInfo;
+            for (int i = 0; i < FrameCount; i++)
+            {
+                var duration = frameInfos[i].Duration / 10;
+                EmoteFrameDurations.Add(duration);
+                TotalDuration += duration;
+            }
+
+            if (TotalDuration == 0 || TotalDuration == FrameCount)
+            {
+                for (int i = 0; i < EmoteFrameDurations.Count; i++)
+                {
+                    EmoteFrameDurations.RemoveAt(i);
+                    EmoteFrameDurations.Insert(i, 10);
+                }
+                TotalDuration = EmoteFrameDurations.Count * 10;
+            }
+
+            for (int i = 0; i < EmoteFrameDurations.Count; i++)
+            {
+                if (EmoteFrameDurations[i] == 0)
+                {
+                    TotalDuration += 10;
+                    EmoteFrameDurations[i] = 10;
+                }
+            }
+        }
+
+        private void ExtractFrames()
+        {
+            var codecInfo = Codec.Info;
+            for (int i = 0; i < FrameCount; i++)
+            {
+                SKImageInfo imageInfo = new SKImageInfo(codecInfo.Width, codecInfo.Height);
+                SKBitmap newBitmap = new SKBitmap(imageInfo);
+                IntPtr pointer = newBitmap.GetPixels();
+                SKCodecOptions codecOptions = new SKCodecOptions(i);
+                Codec.GetPixels(imageInfo, pointer, codecOptions);
+                newBitmap.SetImmutable();
+                EmoteBitmaps.Add(newBitmap);
+            }
+        }
+
+        /// <summary>
+        /// Resizes the emote to have a <see cref="Height"/> of <paramref name="height"/>.
+        /// If the nearest integer scale is within <paramref name="upSnapThreshold"/> or <paramref name="downSnapThreshold"/> of <paramref name="height"/>, it will be integer scaled instead.
+        /// </summary>
+        public void SnapResize(int height, int upSnapThreshold, int downSnapThreshold)
+        {
+            var codecInfo = Codec.Info;
+
+            height = TwitchHelper.SnapResizeHeight(height, upSnapThreshold, downSnapThreshold, codecInfo.Height);
+
+            var imageInfo = new SKImageInfo((int)(height / (double)codecInfo.Height * codecInfo.Width), height);
+            for (var i = 0; i < FrameCount; i++)
+            {
+                var newBitmap = new SKBitmap(imageInfo);
+                EmoteBitmaps[i].ScalePixels(newBitmap, SKFilterQuality.High);
+                EmoteBitmaps[i].Dispose();
+                newBitmap.SetImmutable();
+                EmoteBitmaps[i] = newBitmap;
+            }
+
+            foreach (var image in _emoteFrames ?? [])
+            {
+                image?.Dispose();
+            }
+            _emoteFrames = null;
+        }
+
+        public void Scale(double newScale) => SnapScale(newScale, 0, 0);
+
+        public void SnapScale(double newScale, int upSnapThreshold, int downSnapThreshold)
+        {
+            if (Math.Abs(newScale - 1) < 0.01)
+            {
+                return;
+            }
+
+            var codecInfo = Codec.Info;
+            var height = TwitchHelper.SnapResizeHeight((int)(codecInfo.Height * newScale), upSnapThreshold, downSnapThreshold, codecInfo.Height);
+
+            var imageInfo = new SKImageInfo((int)(height / (double)codecInfo.Height * codecInfo.Width), height);
+            for (var i = 0; i < FrameCount; i++)
+            {
+                var newBitmap = new SKBitmap(imageInfo);
+                EmoteBitmaps[i].ScalePixels(newBitmap, SKFilterQuality.High);
+                EmoteBitmaps[i].Dispose();
+                newBitmap.SetImmutable();
+                EmoteBitmaps[i] = newBitmap;
+            }
+
+            foreach (var image in _emoteFrames ?? [])
+            {
+                image?.Dispose();
+            }
+            _emoteFrames = null;
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+        }
+
+        private void Dispose(bool isDisposing)
+        {
+            try
+            {
+                if (Disposed)
+                {
+                    return;
+                }
+
+                if (isDisposing)
+                {
+                    foreach (var image in _emoteFrames ?? [])
+                    {
+                        image?.Dispose();
+                    }
+
+                    foreach (var bitmap in EmoteBitmaps)
+                    {
+                        bitmap?.Dispose();
+                    }
+
+                    Codec?.Dispose();
+                }
+            }
+            finally
+            {
+                Disposed = true;
+            }
+        }
+    }
+}

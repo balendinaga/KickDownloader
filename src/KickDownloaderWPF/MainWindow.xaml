@@ -1,0 +1,86 @@
+<Window x:Class="KickDownloaderWPF.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:KickDownloaderWPF"
+        xmlns:views="clr-namespace:KickDownloaderWPF.Views"
+        Title="KickDownloader" Width="960" Height="800" MinWidth="760" MinHeight="640"
+        WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+    </Window.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Margin="24,16,24,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="KickDownloader" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <TextBlock Text="FFmpeg" Foreground="{StaticResource MutedTextBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <TextBox Width="280" AutomationProperties.Name="FFmpeg path"
+                         ToolTip="Path to ffmpeg.exe. Leave 'ffmpeg' if it is on PATH."
+                         Text="{Binding FfmpegPath, Source={x:Static local:AppSettings.Current}, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"/>
+                <Button Content="Browse…" Margin="8,0,0,0" MinWidth="88" Click="BrowseFfmpeg_Click"
+                        AutomationProperties.Name="Choose FFmpeg executable"/>
+            </StackPanel>
+        </Grid>
+
+        <TabControl x:Name="Tabs" Grid.Row="1" Margin="24,12,24,0">
+            <TabItem Header="Download VOD">
+                <views:VodTab x:Name="VodTab"/>
+            </TabItem>
+            <TabItem Header="Download Clip">
+                <views:ClipTab x:Name="ClipTab" TransferToChat="ClipTab_TransferToChat"/>
+            </TabItem>
+            <TabItem x:Name="ChatTabItem" Header="Download Chat">
+                <views:ChatTab x:Name="ChatTab"/>
+            </TabItem>
+            <TabItem Header="Render Chat">
+                <views:RenderTab x:Name="RenderTab"/>
+            </TabItem>
+        </TabControl>
+
+        <Border Grid.Row="2" Style="{StaticResource Card}" Margin="24,12,24,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="StatusText" Text="{Binding Status}" ToolTip="{Binding Status}"
+                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="0,0,16,0"
+                           AutomationProperties.LiveSetting="Polite">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasError}" Value="True">
+                                    <Setter Property="Foreground" Value="{StaticResource ErrorBrush}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <ProgressBar Width="220" Height="8" Minimum="0" Maximum="100"
+                                 Value="{Binding Percent, Mode=OneWay}" IsIndeterminate="{Binding IsIndeterminate}"
+                                 Foreground="{StaticResource AccentBrush}"
+                                 AutomationProperties.Name="Operation progress"/>
+                    <TextBlock Width="48" TextAlignment="Right" Margin="8,0,0,0"
+                               Text="{Binding Percent, StringFormat={}{0:0}%}"/>
+                </StackPanel>
+                <Button Grid.Column="2" Content="Cancel" Margin="16,0,0,0" MinWidth="80"
+                        IsEnabled="{Binding IsBusy}" Click="Cancel_Click"/>
+                <Button Grid.Column="3" Content="Open Folder" Margin="8,0,0,0" MinWidth="104"
+                        Visibility="{Binding CanOpenFolder, Converter={StaticResource BoolToVisibility}}"
+                        Click="OpenFolder_Click"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

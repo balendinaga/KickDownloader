@@ -1,0 +1,37 @@
+{
+ "data": {
+  "caption_language_codes": [
+   "en",
+   "tr"
+  ],
+  "category": {
+   "id": 15,
+   "name": "Just Chatting",
+   "slug": "just-chatting"
+  },
+  "channel": {
+   "id": 26239555,
+   "slug": "samplestreamer",
+   "username": "SampleStreamer"
+  },
+  "duration": 4447,
+  "end_time": "2026-11-12T22:01:01Z",
+  "id": "01a1d181-ff00-7f71-8638-3a34ea90175b",
+  "is_live": false,
+  "is_mature": false,
+  "language": "tr",
+  "original_expires_at": "2026-12-12T20:45:20Z",
+  "recording_url": "https://stream.kick.com/3c81249a5ce0/ivs/v1/196233775518/KmCEGzX0onZQ/2026/11/12/20/45/6r6L2WUzdQ35/media/hls/master.m3u8",
+  "start_time": "2026-11-12T20:45:20Z",
+  "status": "public",
+  "thumbnail": {
+   "frame_ms": 2223500,
+   "src": "https://web.kick.com/api/v1/videos/01a1d181-ff00-7f71-8638-3a34ea90175b/thumbnails/2223500.jpeg",
+   "srcSet": ""
+  },
+  "tier": "unverified",
+  "title": "BUYYYRUONN GEL\u0130N EFEN\u0130MM",
+  "viewer_count": 186478
+ },
+ "message": "Success"
+}

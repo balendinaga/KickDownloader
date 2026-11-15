@@ -1,0 +1,47 @@
+{
+  "clip": {
+    "id": "clip_01M7G5HZCPJGB4125AC4RZJDA9",
+    "livestream_id": "135685949",
+    "category_id": "15",
+    "channel_id": 668,
+    "user_id": 133024251,
+    "title": "psssss",
+    "clip_url": "https://clips.kick.com/clips/02/clip_01M7G5HZCPJGB4125AC4RZJDA9/playlist.m3u8",
+    "thumbnail_url": "https://clips.kick.com/clips/02/clip_01M7G5HZCPJGB4125AC4RZJDA9/thumbnail.webp",
+    "privacy": "public",
+    "likes": 0,
+    "liked": false,
+    "views": 6,
+    "duration": 49,
+    "started_at": "2026-11-03T08:10:41Z",
+    "created_at": "2026-11-15T17:55:27.276284Z",
+    "vod_starts_at": 38530,
+    "is_mature": true,
+    "video_url": "https://clips.kick.com/clips/02/clip_01M7G5HZCPJGB4125AC4RZJDA9/playlist.m3u8",
+    "view_count": 6,
+    "likes_count": 0,
+    "vod": {
+      "id": "025962f7-7936-47e4-878c-eca630ab516f"
+    },
+    "category": {
+      "id": 15,
+      "name": "Just Chatting",
+      "slug": "just-chatting",
+      "responsive": "https://files.kick.com/images/subcategories/15/banner/5546d68b-e9f9-49f9-a658-9d2ece637064",
+      "banner": "https://files.kick.com/images/subcategories/15/banner/5546d68b-e9f9-49f9-a658-9d2ece637064",
+      "parent_category": "irl"
+    },
+    "creator": {
+      "id": 133024251,
+      "username": "viewer2",
+      "slug": "viewer2",
+      "profile_picture": null
+    },
+    "channel": {
+      "id": 668,
+      "username": "xQc",
+      "slug": "xqc",
+      "profile_picture": "https://files.kick.com/images/user/676/profile_image/conversion/931b4e8f-5445-427c-bd82-b473530390cc-thumb.webp"
+    }
+  }
+}
