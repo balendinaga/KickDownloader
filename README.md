@@ -1,5 +1,10 @@
 # KickDownloader
 
+![GitHub Release](https://img.shields.io/github/v/release/balendinaga/KickDownloader?style=flat-square&color=53fc18)
+![GitHub Downloads](https://img.shields.io/github/downloads/balendinaga/KickDownloader/total?style=flat-square)
+![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue?style=flat-square)
+![License](https://img.shields.io/github/license/balendinaga/KickDownloader?style=flat-square)
+
 Download [Kick](https://kick.com) VODs, clips and chat history, and render the chat as a transparent video you can
 overlay on your footage. Windows desktop app and command-line tool.
 
