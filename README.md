@@ -15,10 +15,17 @@ its MIT license (see [Credits and licenses](#credits-and-licenses)). Chat is sav
 ## Features
 
 - **VOD download**: full VOD or a time range, any quality, saved as MP4 (HLS streamed through FFmpeg, no re-encoding).
+- <img width="944" height="792" alt="1" src="https://github.com/user-attachments/assets/61c0ac19-60ee-4363-9df9-de3387a97ee1" />
+
 - **Clip download**.
+- <img width="937" height="781" alt="2" src="https://github.com/user-attachments/assets/7cb32f44-ecab-4276-9397-3083ea93c7cf" />
+
 - **Chat download**: full VOD or a time range, as TwitchDownloader-compatible JSON. Emote and badge images are embedded.
+- <img width="940" height="787" alt="3" src="https://github.com/user-attachments/assets/9736e296-27e4-44bf-b7e7-f17598666a59" />
 
 - **Chat render**: transparent chat video (WebM VP9 alpha, MOV ProRes 4444 alpha) or MP4 with a solid background.
+- <img width="938" height="790" alt="4" src="https://github.com/user-attachments/assets/699e1f84-eb23-4c28-ac9b-a42b23793816" />
+
 - Accepts full `kick.com` links or bare ids, including the newer UUIDv7 VOD links.
 - Built-in rate-limit handling: spaced requests, automatic backoff on HTTP 429, download resumes where it stopped.
 - Desktop app with dark theme, progress bar, cancel button and "open folder", plus a scriptable CLI.
