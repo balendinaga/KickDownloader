@@ -100,6 +100,18 @@ public sealed partial class KickApiClient(IKickTransport transport)
         return envelope.Data?.Messages ?? [];
     }
 
+    /// <summary>
+    /// Messages sent before <paramref name="beforeMicros"/> (Unix time in microseconds), newest first, at most 25 per
+    /// page. The returned cursor is the same kind of value (the oldest message's time), so it pages backwards without
+    /// gaps or second-level truncation.
+    /// </summary>
+    public async Task<KickChatPage> GetChatBeforeAsync(long channelId, long beforeMicros, CancellationToken ct = default)
+    {
+        var uri = new Uri($"{Base}/v2/channels/{channelId}/messages?cursor={beforeMicros.ToString(CultureInfo.InvariantCulture)}");
+        var envelope = await GetAsync<KickChatEnvelope>(uri, ct).ConfigureAwait(false);
+        return envelope.Data ?? new KickChatPage();
+    }
+
     private async Task<T> GetAsync<T>(Uri uri, CancellationToken ct)
     {
         var body = await transport.GetStringAsync(uri, ct).ConfigureAwait(false);

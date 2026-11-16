@@ -45,22 +45,28 @@ public sealed class ChatTests
         public Task<byte[]?> GetBytesAsync(Uri uri, CancellationToken ct = default) => Task.FromResult(respond(uri));
     }
 
-    /// <summary>Serves chat windows [t, t+5s) from a message list, returning at most <c>cap</c> earliest messages.</summary>
-    private sealed class FakeKick(List<KickChatMessage> all, int cap = int.MaxValue) : IKickTransport
+    private static long Micros(DateTimeOffset t) => (t.UtcTicks - DateTimeOffset.UnixEpoch.UtcTicks) / 10;
+
+    /// <summary>
+    /// Serves chat like Kick's cursor paging: messages before the cursor (Unix microseconds), newest first, at most
+    /// <c>cap</c> per page, with the oldest message's time as the next cursor.
+    /// </summary>
+    private sealed class FakeKick(List<KickChatMessage> all, int cap = 25, bool frozenCursor = false) : IKickTransport
     {
-        public List<DateTimeOffset> ChatStarts { get; } = [];
+        public List<long> Cursors { get; } = [];
 
         public Task<string> GetStringAsync(Uri uri, CancellationToken ct = default)
         {
             var path = uri.AbsolutePath;
             if (path.EndsWith("/messages"))
             {
-                var t = DateTimeOffset.Parse(Uri.UnescapeDataString(uri.Query.Split("start_time=")[1]),
-                    CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal);
-                ChatStarts.Add(t);
-                var page = all.Where(m => m.CreatedAt >= t && m.CreatedAt < t.AddSeconds(5))
-                    .OrderBy(m => m.CreatedAt).Take(cap).ToList();
-                return Task.FromResult(JsonSerializer.Serialize(new KickChatEnvelope { Data = new KickChatPage { Messages = page } }));
+                var before = long.Parse(uri.Query.Split("cursor=")[1], CultureInfo.InvariantCulture);
+                Cursors.Add(before);
+                var page = all.Where(m => Micros(m.CreatedAt) < before)
+                    .OrderByDescending(m => m.CreatedAt).ThenByDescending(m => m.Id, StringComparer.Ordinal).Take(cap).ToList();
+                var next = page.Count == 0 ? null : (frozenCursor ? before : Micros(page[^1].CreatedAt)).ToString(CultureInfo.InvariantCulture);
+                return Task.FromResult(JsonSerializer.Serialize(
+                    new KickChatEnvelope { Data = new KickChatPage { Messages = page, Cursor = next } }));
             }
 
             return Task.FromResult(path.Contains("/v1/video/") ? Fixture("video.json") : Fixture("channel.json"));
@@ -181,38 +187,84 @@ public sealed class ChatTests
     public void AssetFetcher_trusts_only_https_kick_hosts(string url, bool ok) =>
         Assert.Equal(ok, HttpAssetFetcher.IsTrusted(new Uri(url)));
 
-    [Fact]
-    public async Task Window_requeries_full_page_and_recovers_truncated_tail()
-    {
-        var all = Enumerable.Range(0, 30).Select(i => Msg($"m{i}", 100 + (i * 0.15))).ToList();
-        var kick = new FakeKick(all, cap: 10);
-        var dl = new KickChatDownloader(new KickApiClient(kick), new FakeAssets(_ => null));
-        var got = await dl.CollectWindowAsync(668, VodStart.AddSeconds(100), splitThreshold: 10);
-        Assert.Equal(30, got.Count);
-        Assert.Equal(got.Count, got.Select(m => m.Id).Distinct().Count());
-        Assert.True(kick.ChatStarts.Count > 1);
-    }
+    private static KickChatDownloader Downloader(FakeKick kick, Action<DateTimeOffset>? warn = null) =>
+        new(new KickApiClient(kick), new FakeAssets(_ => null)) { OnPossibleTruncation = warn };
 
     [Fact]
-    public async Task Window_single_request_when_below_threshold()
+    public async Task Range_collects_every_message_of_a_busy_second()
     {
-        var kick = new FakeKick([Msg("a", 100), Msg("b", 101)], cap: 10);
-        var dl = new KickChatDownloader(new KickApiClient(kick), new FakeAssets(_ => null));
-        Assert.Equal(2, (await dl.CollectWindowAsync(668, VodStart.AddSeconds(100), 10)).Count);
-        Assert.Single(kick.ChatStarts);
-    }
-
-    [Fact]
-    public async Task Window_warns_when_full_page_sits_in_one_second()
-    {
-        var all = Enumerable.Range(0, 20).Select(i => Msg($"m{i}", 100)).ToList();
+        // 80 messages inside one second (a page holds only 25), plus quiet traffic around it.
+        var all = Enumerable.Range(0, 80).Select(i => Msg($"burst{i:D3}", 100 + (i * 0.0125))).ToList();
+        all.AddRange(Enumerable.Range(0, 40).Select(i => Msg($"q{i:D3}", 90 + (i * 0.5))));
         var warned = new List<DateTimeOffset>();
-        var dl = new KickChatDownloader(new KickApiClient(new FakeKick(all, cap: 5)), new FakeAssets(_ => null))
-        {
-            OnPossibleTruncation = warned.Add,
-        };
-        await dl.CollectWindowAsync(668, VodStart.AddSeconds(100), 5);
+        var got = await Downloader(new FakeKick(all), warned.Add)
+            .CollectRangeAsync(668, VodStart.AddSeconds(90), VodStart.AddSeconds(110));
+
+        Assert.Equal(all.Count, got.Count);
+        Assert.Equal(all.Select(m => m.Id).Order(), got.Select(m => m.Id).Order());
+        Assert.Empty(warned);
+        Assert.True(got.Zip(got.Skip(1)).All(p => p.First.CreatedAt <= p.Second.CreatedAt), "oldest first");
+    }
+
+    [Fact]
+    public async Task Range_keeps_only_messages_inside_and_stops_after_start()
+    {
+        var all = Enumerable.Range(0, 200).Select(i => Msg($"m{i:D3}", i)).ToList(); // one per second, 0..199 s
+        var kick = new FakeKick(all, cap: 25);
+        var got = await Downloader(kick).CollectRangeAsync(668, VodStart.AddSeconds(100), VodStart.AddSeconds(150));
+
+        Assert.Equal(Enumerable.Range(100, 50).Select(i => $"m{i:D3}"), got.Select(m => m.Id));
+        Assert.Equal(3, kick.Cursors.Count); // 149..125, 124..100, 99..75 (older than start: stop)
+    }
+
+    [Fact]
+    public async Task Range_with_no_messages_costs_one_request()
+    {
+        var kick = new FakeKick([]);
+        Assert.Empty(await Downloader(kick).CollectRangeAsync(668, VodStart, VodStart.AddSeconds(60)));
+        Assert.Single(kick.Cursors);
+    }
+
+    [Fact]
+    public async Task Range_reports_progress_up_to_one()
+    {
+        var all = Enumerable.Range(0, 100).Select(i => Msg($"m{i:D3}", i)).ToList();
+        var reports = new List<double>();
+        await Downloader(new FakeKick(all, cap: 10)).CollectRangeAsync(
+            668, VodStart, VodStart.AddSeconds(100), new Progress<double>(reports.Add));
+        await Task.Delay(50);
+        Assert.Equal(1.0, reports.Max());
+        Assert.All(reports, r => Assert.InRange(r, 0, 1));
+    }
+
+    [Fact]
+    public async Task Range_terminates_and_warns_when_the_cursor_does_not_advance()
+    {
+        var all = Enumerable.Range(0, 60).Select(i => Msg($"m{i:D3}", 100)).ToList();
+        var warned = new List<DateTimeOffset>();
+        var kick = new FakeKick(all, cap: 25, frozenCursor: true);
+        var got = await Downloader(kick, warned.Add).CollectRangeAsync(668, VodStart.AddSeconds(50), VodStart.AddSeconds(120));
         Assert.NotEmpty(warned);
+        Assert.InRange(kick.Cursors.Count, 1, 3);
+        Assert.True(got.Count > 0);
+    }
+
+    [Fact]
+    public async Task Range_cancellation_is_honored()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => Downloader(new FakeKick([Msg("a", 1)]))
+            .CollectRangeAsync(668, VodStart, VodStart.AddSeconds(10), null, cts.Token));
+    }
+
+    [Fact]
+    public async Task Download_keeps_all_messages_of_a_dense_second()
+    {
+        var all = Enumerable.Range(0, 90).Select(i => Msg($"d{i:D3}", 20 + (i * 0.01))).ToList();
+        var root = await Downloader(new FakeKick(all)).DownloadAsync("371f0495-9aaa-4e7a-b88e-22b50c6194b0", "xqc",
+            new ChatDownloadOptions { Duration = TimeSpan.FromSeconds(60) });
+        Assert.Equal(90, root.comments.Count);
     }
 
     [Fact]

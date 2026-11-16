@@ -13,22 +13,17 @@ public sealed record ChatDownloadOptions
     /// <summary>Null = until the end of the VOD.</summary>
     public TimeSpan? Duration { get; init; }
 
-    /// <summary>A window returning at least this many messages may be truncated, so it is re-queried (see CollectWindowAsync).</summary>
-    public int SplitThreshold { get; init; } = 50;
-
     public int AssetConcurrency { get; init; } = 4;
 }
 
 public sealed class KickChatDownloader(KickApiClient api, IAssetFetcher assets)
 {
-    public static readonly TimeSpan WindowLength = TimeSpan.FromSeconds(5);
-
     private static readonly JsonSerializerOptions WriteOptions = new()
     {
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
-    /// <summary>Called with a window start when even re-querying could not prove the window complete.</summary>
+    /// <summary>Called with the time where paging could not advance exactly, so messages around it may be missing.</summary>
     public Action<DateTimeOffset>? OnPossibleTruncation { get; init; }
 
     public async Task<ChatRoot> DownloadAsync(
@@ -36,9 +31,9 @@ public sealed class KickChatDownloader(KickApiClient api, IAssetFetcher assets)
         IProgress<double>? progress = null, CancellationToken ct = default)
     {
         options ??= new ChatDownloadOptions();
-        if (options.Start < TimeSpan.Zero || options.Duration <= TimeSpan.Zero || options.SplitThreshold < 2)
+        if (options.Start < TimeSpan.Zero || options.Duration <= TimeSpan.Zero)
         {
-            throw new ArgumentException("Start must be >= 0, duration > 0, split threshold >= 2.");
+            throw new ArgumentException("Start must be >= 0 and duration > 0.");
         }
 
         var video = await api.GetVideoAsync(new KickVodRef(vodUuid, channelSlug), ct).ConfigureAwait(false);
@@ -68,74 +63,83 @@ public sealed class KickChatDownloader(KickApiClient api, IAssetFetcher assets)
             throw new ArgumentException($"Start {from} is beyond the VOD length {total}.");
         }
 
-        var byId = new Dictionary<string, KickChatMessage>();
-        var order = new List<string>();
-        var span = to - from;
-        for (var t = from; t < to; t += WindowLength)
-        {
-            ct.ThrowIfCancellationRequested();
-            foreach (var m in await CollectWindowAsync(channel.Id, livestream.StartTime + t, options.SplitThreshold, ct)
-                         .ConfigureAwait(false))
-            {
-                var offset = m.CreatedAt - livestream.StartTime;
-                if (offset >= from && offset < to && byId.TryAdd(m.Id, m))
-                {
-                    order.Add(m.Id);
-                }
-            }
-
-            progress?.Report(Math.Min(1.0, (t - from + WindowLength) / span));
-        }
-
-        var messages = order.Select(id => byId[id]).OrderBy(m => m.CreatedAt).ToList();
+        var found = await CollectRangeAsync(channel.Id, livestream.StartTime + from, livestream.StartTime + to, progress, ct)
+            .ConfigureAwait(false);
+        var messages = found;
         var loaded = await LoadAssetsAsync(messages, options.AssetConcurrency, ct).ConfigureAwait(false);
         return ChatConverter.Build(channel, video, messages, loaded, from.TotalSeconds, to.TotalSeconds, DateTimeOffset.UtcNow);
     }
 
     /// <summary>
-    /// One 5s window. start_time always spans 5s even when shifted by 1s, so a full page is not split into
-    /// fixed sub-windows: the window is re-queried from the last received second until a page comes back
-    /// below the threshold. Messages are de-duplicated by id.
+    /// Pages backwards from <paramref name="end"/> with Kick's microsecond cursor (25 messages per request, newest
+    /// first) until a page reaches before <paramref name="start"/>. Unlike fixed time windows, a page can never
+    /// hide messages in a busy second. Returns the messages in [start, end), oldest first, de-duplicated by id.
     /// </summary>
-    public async Task<IReadOnlyList<KickChatMessage>> CollectWindowAsync(
-        long channelId, DateTimeOffset start, int splitThreshold, CancellationToken ct = default)
+    public async Task<List<KickChatMessage>> CollectRangeAsync(
+        long channelId, DateTimeOffset start, DateTimeOffset end,
+        IProgress<double>? progress = null, CancellationToken ct = default)
     {
-        var end = start + WindowLength;
         var seen = new Dictionary<string, KickChatMessage>();
-        var cursor = start;
+        var span = end - start;
+        var cursor = ToMicros(end);
         while (true)
         {
-            var page = await api.GetChatWindowAsync(channelId, cursor, ct).ConfigureAwait(false);
-            foreach (var m in page)
-            {
-                seen.TryAdd(m.Id, m);
-            }
-
-            if (page.Count < splitThreshold)
+            ct.ThrowIfCancellationRequested();
+            var page = await api.GetChatBeforeAsync(channelId, cursor, ct).ConfigureAwait(false);
+            if (page.Messages.Count == 0)
             {
                 break;
             }
 
-            var lastSecond = page.Max(m => m.CreatedAt);
-            lastSecond = new DateTimeOffset(lastSecond.Ticks - (lastSecond.Ticks % TimeSpan.TicksPerSecond), lastSecond.Offset);
-            var stuck = lastSecond <= cursor;
-            if (stuck)
+            foreach (var m in page.Messages)
             {
-                // A full page that fits in one second: moving on may skip messages of that second.
-                OnPossibleTruncation?.Invoke(cursor);
+                if (m.CreatedAt >= start && m.CreatedAt < end)
+                {
+                    seen.TryAdd(m.Id, m);
+                }
             }
 
-            var next = stuck ? cursor + TimeSpan.FromSeconds(1) : lastSecond;
-            if (next >= end)
+            var oldest = page.Messages.Min(m => m.CreatedAt);
+            progress?.Report(Math.Clamp((end - (oldest < start ? start : oldest)) / span, 0, 1));
+            if (oldest < start)
             {
                 break;
+            }
+
+            if (!TryNextCursor(page, oldest, cursor, out var next, out var exact))
+            {
+                OnPossibleTruncation?.Invoke(oldest);
+                break;
+            }
+
+            if (!exact)
+            {
+                OnPossibleTruncation?.Invoke(oldest); // second-level fallback may skip older messages of that second
             }
 
             cursor = next;
         }
 
+        progress?.Report(1.0);
         return seen.Values.OrderBy(m => m.CreatedAt).ToList();
     }
+
+    /// <summary>The page's own cursor when it moves strictly backwards; else the start of the oldest message's second.</summary>
+    private static bool TryNextCursor(KickChatPage page, DateTimeOffset oldest, long current, out long next, out bool exact)
+    {
+        exact = true;
+        if (long.TryParse(page.Cursor, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out next)
+            && next < current)
+        {
+            return true;
+        }
+
+        exact = false;
+        next = ToMicros(new DateTimeOffset(oldest.Ticks - (oldest.Ticks % TimeSpan.TicksPerSecond), oldest.Offset));
+        return next < current;
+    }
+
+    private static long ToMicros(DateTimeOffset t) => (t.UtcTicks - DateTimeOffset.UnixEpoch.UtcTicks) / 10;
 
     private async Task<ChatAssets> LoadAssetsAsync(
         IReadOnlyList<KickChatMessage> messages, int concurrency, CancellationToken ct)

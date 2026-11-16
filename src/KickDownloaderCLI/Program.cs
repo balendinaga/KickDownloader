@@ -10,7 +10,7 @@ const string Usage = """
       check [slug]                                  live read-only API check (default slug: xqc)
       clip <clip id|url> <out.mp4>                  download a clip
       vod <uuid> <out.mp4> [--start T] [--duration T] [--quality 720p60]
-      chat <slug> <vod uuid> <out.json> [--start T] [--duration T] [--threshold 50]
+      chat <slug> <vod uuid> <out.json> [--start T] [--duration T]
       render <chat.json> <out.mov|.webm|.mp4> [--format mov|webm|mp4] [--width 350] [--height 600] [--fps 30]
              [--background #00000000] [--message-color #ffffff] [--font-size 12] [--update-rate 0.2]
              [--start T] [--end T] [--timestamp true] [--outline true] [--emote-scale 1.0] [--verbose true]
@@ -68,7 +68,7 @@ try
                 assetHttp.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0");
                 var downloader = new KickChatDownloader(api, new HttpAssetFetcher(assetHttp))
                 {
-                    OnPossibleTruncation = at => Console.Error.WriteLine($"warning: full page inside one second at {at:u}; some messages may be missing"),
+                    OnPossibleTruncation = at => Console.Error.WriteLine($"warning: chat paging could not advance exactly near {at:u}; some messages may be missing"),
                 };
                 var progress = new Progress<double>(p => Console.Error.Write($"\rchat {p:P0}   "));
                 if (!KickInput.TryParseVodRef(positional[1], out var chatVod))
@@ -78,7 +78,6 @@ try
                     {
                         Start = opts.TryGetValue("start", out var cs) ? ParseTime(cs) : TimeSpan.Zero,
                         Duration = opts.TryGetValue("duration", out var cd) ? ParseTime(cd) : null,
-                        SplitThreshold = opts.TryGetValue("threshold", out var th) ? int.Parse(th, CultureInfo.InvariantCulture) : 50,
                     }, progress, cts.Token);
                 await KickChatDownloader.WriteAsync(root, positional[2], cts.Token);
                 Console.Error.WriteLine();

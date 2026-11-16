@@ -86,7 +86,7 @@ public partial class ChatTab : UserControl
             var note = $"{root.comments.Count} messages, {root.embeddedData.firstParty.Count} emotes";
             if (truncated > 0)
             {
-                note += $" — {truncated} windows may be missing messages";
+                note += $" — {truncated} spots may be missing messages";
             }
 
             return new JobResult(path, $"Done: {Path.GetFileName(path)} ({note})");

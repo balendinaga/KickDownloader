@@ -94,7 +94,7 @@ Times (`T`) are seconds (`3600`) or `hh:mm:ss` (`01:00:00`). Existing output fil
 | `kickdl check [channel]` | Read-only live API check (default channel `xqc`) |
 | `kickdl clip <clip id or url> <out.mp4>` | Download a clip and print the matching chat command |
 | `kickdl vod <vod link or uuid> <out.mp4> [--start T] [--duration T] [--quality 720p60]` | Download a VOD or part of it |
-| `kickdl chat <channel> <vod link or uuid> <out.json> [--start T] [--duration T] [--threshold 50]` | Download VOD chat as TwitchDownloader JSON |
+| `kickdl chat <channel> <vod link or uuid> <out.json> [--start T] [--duration T]` | Download VOD chat as TwitchDownloader JSON |
 | `kickdl render <chat.json> <out> [options]` | Render chat to a transparent video |
 
 Every command accepts `--ffmpeg <path>`.
@@ -126,8 +126,9 @@ kickdl chat xqc 371f0495-9aaa-4e7a-b88e-22b50c6194b0 chat.json --start 01:00:00 
 ```
 
 - `--start` / `--duration` count from the start of the VOD (use the same values as for `vod`).
-- Kick serves chat in 5-second windows. A window that reaches `--threshold` messages (default 50) may be truncated, so it
-  is queried again from its last message; messages are de-duplicated by `id`.
+- Chat is paged backwards from the end of the range with Kick's microsecond `cursor`, 25 messages per request, so even a very
+  busy second loses no messages. Messages are de-duplicated by `id`. If the cursor ever fails to advance (unexpected API
+  behavior), a warning is shown.
 - Requests are spaced 400 ms apart. On HTTP 429 the request is retried up to 8 times, waiting 5 → 15 → 30 → 60 s
   (or the server's `Retry-After` when longer), and the download continues where it stopped.
 
